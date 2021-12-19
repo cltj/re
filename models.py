@@ -4,26 +4,37 @@ class Settings(BaseSettings):
     SERVER_NAME: str = "localhost:5000"
 
 
-class Sales_object(BaseModel):
-    partition_key: str
-    row_key: str
-    finn_code: str
-    status: str
-    price: int
-    expenses: int
-    total_price: int
-    municipality_tax: int
-    boligtype: str
-    eierform: str 
-    pri_rom: int 
-    bolig_areal: int
-    bygg_aar: int
-    energi_bokstav: str
-    energi_farge: str
-    tomt_areal: int
-    tomt_eieform: str
-    gate: str 
-    post_nr: int
-    post_sted: str
-    visninger: list
+class Listing(BaseModel):
+    partition_key: str # status (new, updated, sold, ...)
+    row_key: str # finn_code (unique)
+
+    price: int # Prisantydning
+    expenses: int # Omkostninger
+    total_price: int # Total pris
+    municipality_tax: int  # Kommunale avg. (år)
+
+    house_type: str # Boligtype
+    form_of_ownership: str # Eieform
+    bedroom: int #Soverom
+    prime_living_area: int # Primærrom
+    total_living_area: int # Bruksareal
+    build_year: int # Byggeår
+    energy_letter: str # Energimerking - Bokstav
+    energy_color: str # Energimerking - farge
+    plot_area: int # Tomteareal
+    plot_owner_form: str # Tomt - eieform
+    gross_area: int # Bruttoareal
+    wealth_value: int # Formuesverdi
+    area_description: str # Arealbeskrivelse
+    municipality_number: int # Kommune nummer
+    gards_nummer: int # Gårdsnummer
+    bruks_nummer: int # Bruksnummer
+    expenses_text: str # Omkostninger (utregningseksempel)
+    facilities: list # Fasiliteter
+
+    street: str # Gatenavn
+    post_number: int # Postnummer
+    post_place: str # Poststed
+
+    showing_dates: list # Visnigsdato(er)
 

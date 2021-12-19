@@ -1,10 +1,23 @@
 import bs4, pandas, time, requests, datetime
 
-
-def get_price_info(finnkode):
-    url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finnkode
+def get_sales_object_soup(finn_code):
+    """
+    Gets the soup
+    param: finn_code (str)
+    return: soup
+    """
+    url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finn_code
     r = requests.get(url)
     soup = bs4.BeautifulSoup(r.content, 'html.parser')
+    return soup
+
+
+def get_price_info(soup):
+    """
+    Gets price information and convert to integers
+    param: soup
+    return: price, expenses, total_price, municipality_tax
+    """
     element = soup.find_all(name='div', class_='panel')
     text = str(element[2].text).strip().replace('\xa0','').split('kr')
     price = int(text[0].replace('\n','').replace(' ','').replace('Prisantydning',''))
@@ -15,10 +28,12 @@ def get_price_info(finnkode):
     return price, expenses, total_price, municipality_tax
 
 
-def get_object_info(finnkode):
-    url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finnkode
-    r = requests.get(url)
-    soup = bs4.BeautifulSoup(r.content, 'html.parser')
+def get_object_info(soup):
+    """
+    Gets and coverts all data for the sales object
+    param: soup
+    return: 18 datapoints from the sales object
+    """
     element = soup.find_all(name='dl', class_='definition-list--cols1to2')
     lst = element[0].text.strip().split('\n')
     sum = 0
@@ -34,67 +49,98 @@ def get_object_info(finnkode):
 
     lst = list(zip(list_keys,list_values))
 
-    boligtype = lst[0][1]
-    eierform = lst[1][1]
-    sov = lst[2][1]
-    pri_rom = lst[3][1]
-    bolig_areal = lst[4][1]
-    bygg_aar = lst[5][1]
-    energi = lst[7][1]
-    tomt_areal = lst[9][1]
+    house_type = lst[0][1]
+    form_of_ownership = lst[1][1]
+    bedroom = lst[2][1]
+    prime_living_area = lst[3][1]
+    total_living_area = lst[4][1]
+    build_year = lst[5][1]
+    energy = lst[7][1]
+    plot_area = lst[9][1]
 
-    if 'Selveier' in eierform:
-        eierform = 'Selveier'
+    if 'Selveier' in form_of_ownership:
+        form_of_ownership = 'Selveier'
 
-    sov = int(sov)
-    pri_rom_tmp = pri_rom.split(' ')
-    pri_rom = int(pri_rom_tmp[0])
-    bolig_areal_tmp = bolig_areal.split(' ')
-    bolig_areal = int(bolig_areal_tmp[0])
-    bygg_aar = int(bygg_aar)
-    energi = energi.replace(' ','').split('-')
-    energi_bokstav = energi[0]
-    energi_farge = energi[1]
-    tomt_areal_tmp = tomt_areal.split(' ')
-    tomt_areal= int(tomt_areal_tmp[0])
-    tomt_eieform = tomt_areal_tmp[2].replace('(','').replace(')','')
+    bedroom = int(bedroom)
+    prime_living_area_tmp = prime_living_area.split(' ')
+    prime_living_area = int(prime_living_area_tmp[0])
+    total_living_area_tmp = total_living_area.split(' ')
+    total_living_area = int(total_living_area_tmp[0])
+    build_year = int(build_year)
+    energy = energy.replace(' ','').split('-')
+    energy_letter= energy[0]
+    energy_color = energy[1]
+    plot_area_tmp = plot_area.split(' ')
+    plot_area = int(plot_area_tmp[0])
+    plot_owner_form = plot_area_tmp[2].replace('(','').replace(')','')
 
-    return boligtype, eierform, sov, pri_rom, bolig_areal, bygg_aar, energi_bokstav, energi_farge, tomt_areal, tomt_eieform
+    more_key_info = []
+    element = soup.find_all(name='div', class_='u-display-none')
+    for elem in element[1].contents:
+        if len(elem) > 4:
+            more_key_info.append(elem.text.strip().split('\n'))
+
+    for item in more_key_info:
+        if item[0].lower() == 'bruttoareal':
+            gross_area_tmp = item[1].split(' ')
+            gross_area = int(gross_area_tmp[0])
+        elif item[0].lower() == 'formuesverdi':
+            wealth_value_tmp = item[1].replace('\xa0','').split(' ')
+            wealth_value = int(wealth_value_tmp[0])
+        elif item[0].lower() == 'arealbeskrivelse':
+            area_description = item[1]
+        elif len(item) == 3:
+            municipality_number_tmp = item[0].replace(' ','').split(':')
+            municipality_number = int(municipality_number_tmp[1])
+            gards_nummer_tmp = item[1].replace(' ','').split(':')
+            gards_nummer = int(gards_nummer_tmp[1])
+            bruks_nummer_tmp = item[2].replace(' ','').split(':')
+            bruks_nummer = int(bruks_nummer_tmp[1])
+        elif item[0].lower() == 'omkostninger':
+            expenses_text = item[1]
+        else:
+            facilities = item
+
+    return house_type, form_of_ownership, bedroom, prime_living_area, total_living_area, build_year, energy_letter, energy_color, plot_area, plot_owner_form, gross_area, wealth_value, area_description, municipality_number, gards_nummer, bruks_nummer, expenses_text, facilities
 
 
-def get_address_info(finnkode):
-    url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finnkode
-    r = requests.get(url)
-    soup = bs4.BeautifulSoup(r.content, 'html.parser')
+def get_address_info(soup):
+    """
+    Gets the address information for the sales object
+    param: soup
+    return: street, post_number, post_place
+    """
     element = soup.find_all(name='p', class_='u-mh16')
-    adresse = element[0].text
-    adresse_tmp = adresse.split(',')
-    gate = adresse_tmp[0]
-    post_nr_tmp = adresse_tmp[1].split(' ')
-    post_nr = int(post_nr_tmp[1])
-    post_sted = post_nr_tmp[2]
+    address = element[0].text
+    address_tmp = address.split(',')
+    street = address_tmp[0]
+    post_nr_tmp = address_tmp[1].split(' ')
+    post_number = int(post_nr_tmp[1])
+    post_place = post_nr_tmp[2]
 
-    return gate, post_nr, post_sted
+    return street, post_number, post_place
 
 
-
-def get_visning_info(finnkode):
-    url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finnkode
-    r = requests.get(url)
-    soup = bs4.BeautifulSoup(r.content, 'html.parser')
+def get_showing_info(soup):
+    """
+    Gets and formats the date of open house (showing)
+    Uses helper function 'get_month' to find number eq to str <month>(ex. januar)
+    param: soup
+    raturn showing_date
+    """
     element = soup.find_all(name='dl', class_='u-mb0')
-    temp_visning_dato = element[0].text
-    visnigsdato = temp_visning_dato.replace('\n','').split('\xa0')
-    visning_tidspunkt = visnigsdato[1]
-    visning = visnigsdato[0].replace(' ','').split('.')
-    visning_dag = int(visning[1])
-    visning_mnd = get_month(visning[2].lower())
+    tmp_showing_date = element[0].text
+    showingdate = tmp_showing_date.replace('\n','').split('\xa0')
+    showing_time = showingdate[1]
+    showing = showingdate[0].replace(' ','').split('.')
+    showing_day = int(showing[1])
+    showing_month = get_month(showing[2].lower())
     now = datetime.datetime.now()
-    visning_aar = now.year
-    visning_objekt=[visning_aar, visning_mnd, visning_dag, visning_tidspunkt]
+    showing_year = now.year
+    showing_date = datetime.date(showing_year, showing_month, showing_day)
     
 
-    return visning_objekt
+    return showing_date
 
 
 def get_month(visnings_mnd):
@@ -137,15 +183,13 @@ def get_month(visnings_mnd):
     else:
         print("Error: Ingen valg passet input string")
 
-x = get_price_info(finnkode=str(242042295))
+#soup = get_sales_object_soup(finn_code=str(242042295))
+#x = get_price_info(soup)
+#y = get_object_info(soup)
+#z = get_address_info(soup)
+#w = get_showing_info(soup)
 
-y = get_object_info(finnkode=str(242042295))
-
-z = get_address_info(finnkode=str(242042295))
-
-w = get_visning_info(finnkode=str(242042295))
-
-print(x)
-print(y)
-print(z)
-print(w)
+#print(x)
+#print(y)
+#print(z)
+#print(w)
