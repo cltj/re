@@ -1,26 +1,21 @@
-import bs4, pandas, time, requests
+import bs4, pandas, time, requests, datetime
 
 
-def get_panel_1_info(finnkode):
+def get_price_info(finnkode):
     url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finnkode
     r = requests.get(url)
     soup = bs4.BeautifulSoup(r.content, 'html.parser')
     element = soup.find_all(name='div', class_='panel')
-    p = str(element[2].text).strip().replace('\xa0','').split('kr')
-    n = p[0].replace('\n','').replace(' ','').replace('Prisantydning','')
-    o = p[1].replace('\n','').replace(' ','').replace('Omkostninger','')
-    t = p[2].replace('\n','').replace(' ','').replace('Totalpris','')
-    k = p[3].replace('\n','').replace(' ','').replace('Kommunaleavg.','')
-    price = int(n)
-    cost = int(o)
-    total_price = int(t)
-    yearly_municipality_expense = int(k)
+    text = str(element[2].text).strip().replace('\xa0','').split('kr')
+    price = int(text[0].replace('\n','').replace(' ','').replace('Prisantydning',''))
+    expenses = int(text[1].replace('\n','').replace(' ','').replace('Omkostninger',''))
+    total_price = int(text[2].replace('\n','').replace(' ','').replace('Totalpris',''))
+    municipality_tax = int(text[3].replace('\n','').replace(' ','').replace('Kommunaleavg.',''))
+ 
+    return price, expenses, total_price, municipality_tax
 
 
-    return price, cost, total_price, yearly_municipality_expense
-
-
-def get_panel_2_info(finnkode):
+def get_object_info(finnkode):
     url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finnkode
     r = requests.get(url)
     soup = bs4.BeautifulSoup(r.content, 'html.parser')
@@ -67,7 +62,7 @@ def get_panel_2_info(finnkode):
     return boligtype, eierform, sov, pri_rom, bolig_areal, bygg_aar, energi_bokstav, energi_farge, tomt_areal, tomt_eieform
 
 
-def get_panel_3_info(finnkode):
+def get_address_info(finnkode):
     url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finnkode
     r = requests.get(url)
     soup = bs4.BeautifulSoup(r.content, 'html.parser')
@@ -81,9 +76,76 @@ def get_panel_3_info(finnkode):
 
     return gate, post_nr, post_sted
 
-x = get_panel_1_info(finnkode=str(242042295))
 
-y = get_panel_2_info(finnkode=str(242042295))
 
-z = get_panel_3_info(finnkode=str(242042295))
-print(x+y+z)
+def get_visning_info(finnkode):
+    url = 'https://www.finn.no/realestate/homes/ad.html?finnkode=' + finnkode
+    r = requests.get(url)
+    soup = bs4.BeautifulSoup(r.content, 'html.parser')
+    element = soup.find_all(name='dl', class_='u-mb0')
+    temp_visning_dato = element[0].text
+    visnigsdato = temp_visning_dato.replace('\n','').split('\xa0')
+    visning_tidspunkt = visnigsdato[1]
+    visning = visnigsdato[0].replace(' ','').split('.')
+    visning_dag = int(visning[1])
+    visning_mnd = get_month(visning[2].lower())
+    now = datetime.datetime.now()
+    visning_aar = now.year
+    visning_objekt=[visning_aar, visning_mnd, visning_dag, visning_tidspunkt]
+    
+
+    return visning_objekt
+
+
+def get_month(visnings_mnd):
+    if visnings_mnd == 'januar':
+        visnings_mnd = 1
+        return visnings_mnd
+    elif visnings_mnd == 'februar':
+        visnings_mnd = 2
+        return visnings_mnd
+    elif visnings_mnd == 'mars':
+        visnings_mnd = 3
+        return visnings_mnd
+    elif visnings_mnd == 'april':
+        visnings_mnd = 4
+        return visnings_mnd
+    elif visnings_mnd == 'mai':
+        visnings_mnd = 5
+        return visnings_mnd
+    elif visnings_mnd == 'juni':
+        visnings_mnd = 6
+        return visnings_mnd
+    elif visnings_mnd == 'juli':
+        visnings_mnd = 7
+        return visnings_mnd
+    elif visnings_mnd == 'august':
+        visnings_mnd = 8
+        return visnings_mnd
+    elif visnings_mnd == 'september':
+        visnings_mnd = 9
+        return visnings_mnd
+    elif visnings_mnd == 'oktober':
+        visnings_mnd = 10
+        return visnings_mnd
+    elif visnings_mnd == 'november':
+        visnings_mnd = 11
+        return visnings_mnd
+    elif visnings_mnd == 'desember':
+        visnings_mnd = 12
+        return visnings_mnd
+    else:
+        print("Error: Ingen valg passet input string")
+
+x = get_price_info(finnkode=str(242042295))
+
+y = get_object_info(finnkode=str(242042295))
+
+z = get_address_info(finnkode=str(242042295))
+
+w = get_visning_info(finnkode=str(242042295))
+
+print(x)
+print(y)
+print(z)
+print(w)
